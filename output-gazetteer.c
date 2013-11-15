@@ -245,6 +245,7 @@ static int split_tags(struct keyval *tags, unsigned int flags, struct keyval *na
    struct keyval *item;
    struct keyval *conscriptionnumber;
    struct keyval *streetnumber;
+   struct keyval *unit;
 
    *admin_level = ADMINLEVEL_NONE;
    *housenumber = 0;
@@ -258,6 +259,7 @@ static int split_tags(struct keyval *tags, unsigned int flags, struct keyval *na
    place = 0;
    conscriptionnumber = 0;
    streetnumber = 0;
+   unit = 0;
 
    /* Initialise the result lists */
    initList(names);
@@ -467,6 +469,10 @@ static int split_tags(struct keyval *tags, unsigned int flags, struct keyval *na
              addItem(places, "place", "houses", 1);
           }
       }
+      else if (strcmp(item->key, "addr:unit") == 0)
+      {
+          unit = item;
+      }
       else if (strcmp(item->key, "is_in") == 0 ||
           (strncmp(item->key, "is_in:", 5) == 0) ||
           strcmp(item->key, "addr:country")== 0 ||
@@ -616,6 +622,18 @@ static int split_tags(struct keyval *tags, unsigned int flags, struct keyval *na
          free(completenumber);
       }
     }
+
+   /* Handle addresses with units (append addr:unit to addr:housenumber) */
+   if (unit && *housenumber)
+   {
+       size_t completesize = strlen((*housenumber)->value) + 2 + strlen(unit->value);
+       char * completenumber = malloc(completesize);
+       snprintf(completenumber, completesize, "%s/%s", (*housenumber)->value, unit->value);
+       freeItem(*housenumber);
+       addItem(tags, "addr:housenumber", completenumber, 0);
+       *housenumber = popItem(tags);
+       free(completenumber);
+   }
 
    if (place)
    {
